@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/lipgloss"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -20,6 +21,7 @@ type (
 		author      string
 		textInput   textinput.Model
 		err         error
+		errorStyle  lipgloss.Style
 	}
 )
 
@@ -48,12 +50,16 @@ func initialModel(flagAuthor string) model {
 		author:    flagAuthor,
 		textInput: ti,
 		err:       err,
+		errorStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Bold(true),
 	}
 }
 
 // getAvailableTemplates scans the templates directory and returns a slice of template names.
 func getAvailableTemplates() ([]string, error) {
-	templatesPath := "./templates"
+	templatesPath, err := getTemplatesPath()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get templates path: %w", err)
+	}
 	var templates []string
 
 	entries, err := os.ReadDir(templatesPath)
@@ -158,13 +164,10 @@ func isValidName(name string) bool {
 
 // View renders the UI.
 func (m model) View() string {
-	if m.err != nil {
-		return fmt.Sprintf("\nError: %v\n\n(press ctrl+c to quit)", m.err)
-	}
-
+	var s string
 	switch m.step {
 	case stepChooseTemplate:
-		s := "Which template would you like to use?\n\n"
+		s = "Which template would you like to use?\n\n"
 		for i, tpl := range m.templates {
 			cursor := " "
 			if m.cursor == i {
@@ -172,12 +175,16 @@ func (m model) View() string {
 			}
 			s += fmt.Sprintf("%s %s\n", cursor, tpl)
 		}
-		s += "\n(press ctrl+c to quit)\n"
-		return s
 	case stepEnterProjectName:
-		return fmt.Sprintf("What is the name of your project?\n\n%s\n\n(press enter to confirm)", m.textInput.View())
+		s = fmt.Sprintf("What is the name of your project?\n\n%s\n\n(press enter to confirm)", m.textInput.View())
 	case stepEnterAuthorName:
-		return fmt.Sprintf("What is your GitHub username?\n\n%s\n\n(press enter to confirm)", m.textInput.View())
+		s = fmt.Sprintf("What is your GitHub username?\n\n%s\n\n(press enter to confirm)", m.textInput.View())
 	}
-	return ""
+	
+	if m.err != nil {
+		s += fmt.Sprintf("\n\n%s", m.errorStyle.Render(m.err.Error()))
+	}
+
+	s += "\n(press ctrl+c to quit)\n"
+	return s
 }
