@@ -1,2 +1,7 @@
 name: "Go REST API"
 description: "A starter for a REST API with a main package and go.mod."
+hooks:
+  post_create:
+    - "git init"
+    - "go mod tidy"
+    - "echo '✅ Project {{ .ProjectName }} initialized with Git and Go modules.'"

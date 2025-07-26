@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"text/template"
 	"time"
+	"gopkg.in/yaml.v3"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 )
@@ -78,6 +79,11 @@ func copyTemplate(templatePath, projectPath string, data TemplateData) error {
 		// Create the full destination path.
 		destPath := filepath.Join(projectPath, relativePath)
 
+		// Skip the template.yaml file itself.
+		if d.Name() == "template.yaml" {
+			return nil
+		}
+
 		if d.IsDir() {
 			// It's a directory, so create it in the destination.
 			// MkdirAll is used to create parent directories if they don't exist.
@@ -138,10 +144,18 @@ forma new go-api my-awesome-project`,
 		fmt.Printf("Creating a new project '%s' from template '%s'\n", projectName, templateName)
 
 		templatePath := "./templates/" + templateName
-		// Check if the template exists in the "./templates" directory.
-		_, err := os.Stat(templatePath)
+		
+		// 1. Read and parse the template.yaml file to get hook info
+		configPath := filepath.Join(templatePath, "template.yaml")
+		yamlFile, err := os.ReadFile(configPath)
 		if err != nil {
-			fmt.Printf("Template '%s' not found at '%s'.\n", templateName, templatePath)
+			fmt.Printf("Error reading template config: %v\n", err)
+			return
+		}
+
+		var templateConfig TemplateConfig
+		if err := yaml.Unmarshal(yamlFile, &templateConfig); err != nil {
+			fmt.Printf("Error parsing template config: %v\n", err)
 			return
 		}
 
@@ -167,8 +181,7 @@ forma new go-api my-awesome-project`,
 			fmt.Printf("Error checking project directory: %v\n", err)
 			return
 		}
-		// Create the new project directory.
-		projectPath := "./" + projectName
+		
 		data := TemplateData{
 			ProjectName: projectName,
 			Author:      author,
@@ -176,11 +189,22 @@ forma new go-api my-awesome-project`,
 			Timestamp:   time.Now().Format(time.RFC822),
 		}
 
+		// Create the new project directory.
+		projectPath := "./" + projectName
+
 		// Copy the entire template structure.
 		err = copyTemplate(templatePath, projectPath, data)
 		if err != nil {
 			fmt.Printf("Error creating project from template: %v\n", err)
 			return
+		}
+
+		// 2. Run the post-create hooks
+		if len(templateConfig.Hooks.PostCreate) > 0 {
+			if err := runHooks(templateConfig.Hooks.PostCreate, projectPath, data); err != nil {
+				fmt.Printf("Error running post-create hooks: %v\n", err)
+				return
+			}
 		}
 
 		fmt.Println("✅ Project created successfully!")
