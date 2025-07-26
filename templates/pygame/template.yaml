@@ -1,0 +1,7 @@
+name: "Python Pygame Project"
+description: "A starter template for a Pygame application with venv setup."
+hooks:
+  post_create:
+    - "python3 -m venv venv"
+    - "source venv/bin/activate && pip install -r requirements.txt"
+    - "echo '✅ Pygame project initialized. Run with: source venv/bin/activate && python3 main.py'"

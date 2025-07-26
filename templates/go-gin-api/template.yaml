@@ -1,0 +1,7 @@
+name: "Go REST API (Gin)"
+description: "A starter template for a RESTful API using the Gin framework."
+hooks:
+  post_create:
+    - "go mod init github.com/{{ .Author }}/{{ .ProjectName }}"
+    - "go mod tidy"
+    - "echo '✅ Go API project initialized. Run with: go run .'"

@@ -84,16 +84,36 @@ func (m model) Init() tea.Cmd {
 
 // Update handles incoming messages.
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.step == stepChooseTemplate {
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.String() {
+			case "ctrl+c":
+				return m, tea.Quit
+			case "up", "k":
+				if m.cursor > 0 {
+					m.cursor--
+				}
+			case "down", "j":
+				if m.cursor < len(m.templates)-1 {
+					m.cursor++
+				}
+			case "enter":
+				m.template = m.templates[m.cursor]
+				m.step = stepEnterProjectName // Move to next step
+				return m, nil
+			}
+		}
+		return m, nil
+	}
+	// Handle the other steps which use text input
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case "ctrl+c":
 			return m, tea.Quit
 		case "enter":
 			switch m.step {
-			case stepChooseTemplate:
-				m.template = m.templates[m.cursor]
-				m.step = stepEnterProjectName // Move to next step
 			case stepEnterProjectName:
 				m.projectName = m.textInput.Value()
 				m.textInput.Reset()
@@ -106,7 +126,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			case stepEnterAuthorName:
 				m.author = m.textInput.Value()
-				return m, tea.Quit // Done!
+				return m, tea.Quit
 			}
 			return m, nil
 		}
@@ -121,7 +141,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // View renders the UI.
 func (m model) View() string {
 	if m.err != nil {
-		return fmt.Sprintf("\nError: %v\n\n(press q to quit)", m.err)
+		return fmt.Sprintf("\nError: %v\n\n(press ctrl+c to quit)", m.err)
 	}
 
 	switch m.step {
@@ -134,7 +154,7 @@ func (m model) View() string {
 			}
 			s += fmt.Sprintf("%s %s\n", cursor, tpl)
 		}
-		s += "\n(press q or ctrl+c to quit)\n"
+		s += "\n(press ctrl+c to quit)\n"
 		return s
 	case stepEnterProjectName:
 		return fmt.Sprintf("What is the name of your project?\n\n%s\n\n(press enter to confirm)", m.textInput.View())

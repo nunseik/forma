@@ -1,0 +1,15 @@
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+
+# Binaries for programs and plugins
+bin/
+pkg/
+
+# Local go.mod files
+go.sum
+go.mod.bak

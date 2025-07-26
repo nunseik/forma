@@ -1,0 +1,7 @@
+name: "Python RAG Agent"
+description: "A simple RAG agent using FAISS and Sentence-Transformers."
+hooks:
+  post_create:
+    - "python3 -m venv venv"
+    - "source venv/bin/activate && pip install -r requirements.txt"
+    - "echo '✅ RAG project initialized. Run with: source venv/bin/activate && python3 main.py'"
