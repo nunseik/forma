@@ -73,7 +73,7 @@ var removeCmd = &cobra.Command{
 		var response string
 		fmt.Scanln(&response)
 
-		if strings.ToLower(response) != "n" {
+		if strings.ToLower(response) != "y" {
 			fmt.Println("Aborted.")
 			return
 		}
