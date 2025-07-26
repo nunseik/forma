@@ -74,7 +74,11 @@ var listCmd = &cobra.Command{
 	Short: "Lists all available project templates.",
 	Long:  `Scans the templates directory and lists all available project templates found.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		templatesPath := "./templates"
+		templatesPath, err := getTemplatesPath()
+		if err != nil {
+			fmt.Printf("Error getting templates path: %v\n", err)
+			return
+		}
 
 		entries, err := os.ReadDir(templatesPath)
 		if err != nil {

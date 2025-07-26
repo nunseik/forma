@@ -135,7 +135,12 @@ forma new go-api my-awesome-project`,
 
 		fmt.Printf("Creating a new project '%s' from template '%s'\n", projectName, templateName)
 
-		templatePath := "./templates/" + templateName
+		systemTemplatesPath, err := getTemplatesPath()
+		if err != nil {
+			fmt.Printf("Error getting templates path: %v\n", err)
+			return
+		}
+		templatePath := filepath.Join(systemTemplatesPath, templateName)
 
 		// 1. Read and parse the template.yaml file to get hook info
 		configPath := filepath.Join(templatePath, "template.yaml")
