@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"text/template"
 	"time"
-
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 )
 
@@ -84,7 +84,6 @@ func copyTemplate(templatePath, projectPath string, data TemplateData) error {
 			return os.MkdirAll(destPath, d.Type().Perm())
 		} else {
 			// It's a file, so copy it.
-			// (Assuming you have the copyFile function from our previous conversation)
 			return processAndCopyFile(path, destPath, data)
 		}
 	}
@@ -100,31 +99,55 @@ var newCmd = &cobra.Command{
 For example:
 forma new go-api my-awesome-project`,
 	// This makes sure the user provides exactly two arguments.
-	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) < 2 {
-			fmt.Println("Error: You must specify a template and a project name.")
+		var templateName string
+    	var projectName string
+		if len(args) == 0 {
+			// No arguments, launch the TUI!
+			m := initialModel()
+			p := tea.NewProgram(m)
+			finalModel, err := p.Run()
+			if err != nil {
+				fmt.Println("Error running program:", err)
+				os.Exit(1)
+			}
+
+			// Cast the final model to our model type
+			final := finalModel.(model)
+
+			// Check if the user quit without confirming
+			if final.template == "" || final.textInput.Value() == "" {
+				fmt.Println("Aborted.")
+				return
+			}
+
+			templateName = final.template
+			projectName = final.textInput.Value()
+
+		} else if len(args) == 2 {
+			// Arguments provided, use them directly.
+			templateName = args[0]
+			projectName = args[1]
+
+		} else {
+			// Incorrect number of arguments. Cobra usually handles this, but as a fallback:
+			fmt.Println("Error: Invalid arguments. Use 'forma new <template> <name>' or 'forma new' for interactive mode.")
 			return
 		}
-		template := args[0]
-		projectName := args[1]
 
-		fmt.Printf("Creating a new project '%s' from template '%s'\n", projectName, template)
+		fmt.Printf("Creating a new project '%s' from template '%s'\n", projectName, templateName)
 
-		// --- TODO: DAY 1 LOGIC GOES HERE ---
-
-		templatePath := "./templates/" + template
-		// 1. Check if the template exists in the "./templates" directory.
-		//    If it does not exist, print an error message and exit.
+		templatePath := "./templates/" + templateName
+		// Check if the template exists in the "./templates" directory.
 		_, err := os.Stat(templatePath)
 		if err != nil {
-			fmt.Printf("Template '%s' not found at '%s'.\n", template, templatePath)
+			fmt.Printf("Template '%s' not found at '%s'.\n", templateName, templatePath)
 			return
 		}
 
 		_, err = os.Stat("./" + projectName)
 		if err == nil {
-			// 2. If the project directory already exists, prompt the user for confirmation to overwrite it.
+			// If the project directory already exists, prompt the user for confirmation to overwrite it.
 			fmt.Printf("Project directory '%s' already exists. Do you want to overwrite it? (y/n): ", projectName)
 			var response string
 			fmt.Scanln(&response)
@@ -144,7 +167,7 @@ forma new go-api my-awesome-project`,
 			fmt.Printf("Error checking project directory: %v\n", err)
 			return
 		}
-		// 3. Create the new project directory.
+		// Create the new project directory.
 		projectPath := "./" + projectName
 		data := TemplateData{
 			ProjectName: projectName,
@@ -153,7 +176,7 @@ forma new go-api my-awesome-project`,
 			Timestamp:   time.Now().Format(time.RFC822),
 		}
 
-		// 3. Copy the entire template structure.
+		// Copy the entire template structure.
 		err = copyTemplate(templatePath, projectPath, data)
 		if err != nil {
 			fmt.Printf("Error creating project from template: %v\n", err)
