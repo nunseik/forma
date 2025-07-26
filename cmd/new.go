@@ -1,6 +1,3 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -10,18 +7,17 @@ import (
 	"path/filepath"
 	"text/template"
 	"time"
-	"gopkg.in/yaml.v3"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 var author string
-var goVersion string
 
 type TemplateData struct {
 	ProjectName string
 	Author      string
-	GoVersion   string
 	Timestamp   string
 }
 
@@ -106,11 +102,16 @@ For example:
 forma new go-api my-awesome-project`,
 	// This makes sure the user provides exactly two arguments.
 	Run: func(cmd *cobra.Command, args []string) {
-		var templateName string
-    	var projectName string
-		if len(args) == 0 {
+		var templateName, projectName, finalAuthor string
+
+		// If we have all required info, run directly.
+		if len(args) == 2 && author != "" {
+			templateName = args[0]
+			projectName = args[1]
+			finalAuthor = author
+		} else {
 			// No arguments, launch the TUI!
-			m := initialModel()
+			m := initialModel(author)
 			p := tea.NewProgram(m)
 			finalModel, err := p.Run()
 			if err != nil {
@@ -122,29 +123,20 @@ forma new go-api my-awesome-project`,
 			final := finalModel.(model)
 
 			// Check if the user quit without confirming
-			if final.template == "" || final.textInput.Value() == "" {
+			if final.template == "" || final.projectName == "" {
 				fmt.Println("Aborted.")
 				return
 			}
 
 			templateName = final.template
-			projectName = final.textInput.Value()
-
-		} else if len(args) == 2 {
-			// Arguments provided, use them directly.
-			templateName = args[0]
-			projectName = args[1]
-
-		} else {
-			// Incorrect number of arguments. Cobra usually handles this, but as a fallback:
-			fmt.Println("Error: Invalid arguments. Use 'forma new <template> <name>' or 'forma new' for interactive mode.")
-			return
+			projectName = final.projectName
+			finalAuthor = final.author
 		}
 
 		fmt.Printf("Creating a new project '%s' from template '%s'\n", projectName, templateName)
 
 		templatePath := "./templates/" + templateName
-		
+
 		// 1. Read and parse the template.yaml file to get hook info
 		configPath := filepath.Join(templatePath, "template.yaml")
 		yamlFile, err := os.ReadFile(configPath)
@@ -181,11 +173,10 @@ forma new go-api my-awesome-project`,
 			fmt.Printf("Error checking project directory: %v\n", err)
 			return
 		}
-		
+
 		data := TemplateData{
 			ProjectName: projectName,
-			Author:      author,
-			GoVersion:   goVersion,
+			Author:      finalAuthor,
 			Timestamp:   time.Now().Format(time.RFC822),
 		}
 
@@ -213,8 +204,5 @@ forma new go-api my-awesome-project`,
 
 func init() {
 	rootCmd.AddCommand(newCmd)
-
-	// Add flags here
-	newCmd.Flags().StringVarP(&author, "author", "a", "Your Name", "Author of the project")
-	newCmd.Flags().StringVarP(&goVersion, "go-version", "g", "1.24", "Go version for the go.mod file")
+	newCmd.Flags().StringVarP(&author, "author", "a", "", "Author of the project")
 }

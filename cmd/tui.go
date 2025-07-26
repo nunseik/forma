@@ -4,29 +4,33 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 type (
-	step int
+	step  int
 	model struct {
-		step       step
-		templates  []string
-		cursor     int
-		template   string
-		textInput  textinput.Model
-		err        error
+		step        step
+		templates   []string
+		cursor      int
+		template    string
+		projectName string
+		author      string
+		textInput   textinput.Model
+		err         error
 	}
 )
 
 const (
 	stepChooseTemplate step = iota
 	stepEnterProjectName
+	stepEnterAuthorName
 )
-	
+
 // Initialize the model with available templates.
-func initialModel() model {
+func initialModel(flagAuthor string) model {
 	templates, err := getAvailableTemplates()
 	if err != nil {
 		fmt.Println("Error getting templates:", err)
@@ -41,6 +45,7 @@ func initialModel() model {
 	return model{
 		step:      stepChooseTemplate,
 		templates: templates,
+		author:    flagAuthor,
 		textInput: ti,
 		err:       err,
 	}
@@ -79,51 +84,36 @@ func (m model) Init() tea.Cmd {
 
 // Update handles incoming messages.
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
-
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
-		}
-	}
-
-	switch m.step {
-	case stepChooseTemplate:
-		return updateChooseTemplate(msg, m)
-	case stepEnterProjectName:
-		return updateEnterProjectName(msg, m)
-	}
-	return m, cmd
-}
-
-func updateChooseTemplate(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "up", "k":
-			if m.cursor > 0 { m.cursor-- }
-		case "down", "j":
-			if m.cursor < len(m.templates)-1 { m.cursor++ }
 		case "enter":
-			m.template = m.templates[m.cursor]
-			m.step = stepEnterProjectName // Move to the next step
+			switch m.step {
+			case stepChooseTemplate:
+				m.template = m.templates[m.cursor]
+				m.step = stepEnterProjectName // Move to next step
+			case stepEnterProjectName:
+				m.projectName = m.textInput.Value()
+				m.textInput.Reset()
+				// If author was not provided by flag, ask for it. Otherwise, we're done.
+				if m.author == "" {
+					m.textInput.Placeholder = "YourGitHubUsername"
+					m.step = stepEnterAuthorName
+				} else {
+					return m, tea.Quit
+				}
+			case stepEnterAuthorName:
+				m.author = m.textInput.Value()
+				return m, tea.Quit // Done!
+			}
 			return m, nil
 		}
 	}
-	return m, nil
-}
 
-func updateEnterProjectName(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
+	// Handle text input updates
 	var cmd tea.Cmd
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		if msg.String() == "enter" {
-			return m, tea.Quit // Done!
-		}
-	}
-
 	m.textInput, cmd = m.textInput.Update(msg)
 	return m, cmd
 }
@@ -134,19 +124,22 @@ func (m model) View() string {
 		return fmt.Sprintf("\nError: %v\n\n(press q to quit)", m.err)
 	}
 
-	if m.step == stepChooseTemplate {
+	switch m.step {
+	case stepChooseTemplate:
 		s := "Which template would you like to use?\n\n"
 		for i, tpl := range m.templates {
 			cursor := " "
-			if m.cursor == i { cursor = ">" }
+			if m.cursor == i {
+				cursor = ">"
+			}
 			s += fmt.Sprintf("%s %s\n", cursor, tpl)
 		}
-		s += "\n(press q to quit)\n"
+		s += "\n(press q or ctrl+c to quit)\n"
 		return s
+	case stepEnterProjectName:
+		return fmt.Sprintf("What is the name of your project?\n\n%s\n\n(press enter to confirm)", m.textInput.View())
+	case stepEnterAuthorName:
+		return fmt.Sprintf("What is your GitHub username/organization?\n\n%s\n\n(press enter to confirm)", m.textInput.View())
 	}
-
-	return fmt.Sprintf(
-		"What is the name of your project?\n\n%s\n\n(press enter to confirm)",
-		m.textInput.View(),
-	)
+	return ""
 }
