@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
+	"regexp"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -116,6 +116,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch m.step {
 			case stepEnterProjectName:
 				m.projectName = m.textInput.Value()
+				if !isValidName(m.projectName) {
+					m.err = fmt.Errorf("invalid project name: %s\nNames should start with a letter or number, only contains letters, numbers, hyphens, or underscores", m.projectName)
+					return m, nil
+				}
 				m.textInput.Reset()
 				// If author was not provided by flag, ask for it. Otherwise, we're done.
 				if m.author == "" {
@@ -126,6 +130,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			case stepEnterAuthorName:
 				m.author = m.textInput.Value()
+				if !isValidName(m.author) {
+					m.err = fmt.Errorf("invalid author name: %s\nNames should start with a letter or number, only contains letters, numbers, hyphens, or underscores", m.author)
+					return m, nil
+				}
 				return m, tea.Quit
 			}
 			return m, nil
@@ -136,6 +144,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.textInput, cmd = m.textInput.Update(msg)
 	return m, cmd
+}
+
+func isValidName(name string) bool {
+    if name == "" {
+        return false
+    }
+    // Regex to match a valid project name: starts and ends with a letter or number,
+    // and contains only letters, numbers, hyphens, or underscores.
+    re := regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_-]*$`)
+    return re.MatchString(name)
 }
 
 // View renders the UI.

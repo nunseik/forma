@@ -122,6 +122,12 @@ forma new go-api my-awesome-project`,
 			// Cast the final model to our model type
 			final := finalModel.(model)
 
+			// Check if there was an error in the TUI
+			if final.err != nil {
+				fmt.Println("\nProject creation aborted due to invalid input.")
+				return
+			}
+
 			// Check if the user quit without confirming
 			if final.template == "" || final.projectName == "" {
 				fmt.Println("Aborted.")
