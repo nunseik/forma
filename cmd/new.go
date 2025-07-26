@@ -7,46 +7,52 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"text/template"
 	"path/filepath"
+	"text/template"
+	"time"
 
 	"github.com/spf13/cobra"
 )
 
+var author string
+var goVersion string
+
 type TemplateData struct {
-    ProjectName string
-    // We can add more fields later, like Author, GoVersion, etc.
+	ProjectName string
+	Author      string
+	GoVersion   string
+	Timestamp   string
 }
 
 // processAndCopyFile reads a source file, processes it as a Go template,
 // and writes the output to the destination file.
 func processAndCopyFile(src, dst string, data TemplateData) error {
-    // Read the source file content
-    content, err := os.ReadFile(src)
-    if err != nil {
-        return fmt.Errorf("failed to read file %s: %w", src, err)
-    }
+	// Read the source file content
+	content, err := os.ReadFile(src)
+	if err != nil {
+		return fmt.Errorf("failed to read file %s: %w", src, err)
+	}
 
-    // Create a new template and parse the file content
-    tmpl, err := template.New(filepath.Base(src)).Parse(string(content))
-    if err != nil {
-        return fmt.Errorf("failed to parse template %s: %w", src, err)
-    }
+	// Create a new template and parse the file content
+	tmpl, err := template.New(filepath.Base(src)).Parse(string(content))
+	if err != nil {
+		return fmt.Errorf("failed to parse template %s: %w", src, err)
+	}
 
-    // Create the destination file
-    destFile, err := os.Create(dst)
-    if err != nil {
-        return fmt.Errorf("failed to create destination file %s: %w", dst, err)
-    }
-    defer destFile.Close()
+	// Create the destination file
+	destFile, err := os.Create(dst)
+	if err != nil {
+		return fmt.Errorf("failed to create destination file %s: %w", dst, err)
+	}
+	defer destFile.Close()
 
-    // Execute the template, writing the output to the destination file
-    err = tmpl.Execute(destFile, data)
-    if err != nil {
-        return fmt.Errorf("failed to execute template: %w", err)
-    }
+	// Execute the template, writing the output to the destination file
+	err = tmpl.Execute(destFile, data)
+	if err != nil {
+		return fmt.Errorf("failed to execute template: %w", err)
+	}
 
-    return nil
+	return nil
 }
 
 // copyTemplate walks through a template directory and copies its structure and files.
@@ -142,7 +148,9 @@ forma new go-api my-awesome-project`,
 		projectPath := "./" + projectName
 		data := TemplateData{
 			ProjectName: projectName,
-			// Populate other fields as needed
+			Author:      author,
+			GoVersion:   goVersion,
+			Timestamp:   time.Now().Format(time.RFC822),
 		}
 
 		// 3. Copy the entire template structure.
@@ -159,13 +167,7 @@ forma new go-api my-awesome-project`,
 func init() {
 	rootCmd.AddCommand(newCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// newCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// newCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// Add flags here
+	newCmd.Flags().StringVarP(&author, "author", "a", "Your Name", "Author of the project")
+	newCmd.Flags().StringVarP(&goVersion, "go-version", "g", "1.24", "Go version for the go.mod file")
 }

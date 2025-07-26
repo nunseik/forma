@@ -1,3 +1,3 @@
-module github.com/your-username/{{ .ProjectName }}
+module github.com/{{ .Author }}/{{ .ProjectName }}
 
-go 1.24.2
+go {{ .GoVersion }}
