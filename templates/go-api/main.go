@@ -1,1 +1,9 @@
-package goapi
+//go:build ignore
+
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("Starting {{ .ProjectName }} server...")
+}

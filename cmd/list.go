@@ -1,27 +1,78 @@
 /*
 Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/spf13/cobra"
 )
 
+// TemplateConfig matches the structure of the template.yaml file.
+type TemplateConfig struct {
+	Name        string `yaml:"name"`
+	Description string `yaml:"description"`
+}
+
 // listCmd represents the list command
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Lists all available project templates.",
+	Long:  `Scans the templates directory and lists all available project templates found.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("list called")
+		templatesPath := "./templates"
+
+		entries, err := os.ReadDir(templatesPath)
+		if err != nil {
+			fmt.Printf("Error reading templates directory: %v\n", err)
+			return
+		}
+
+		fmt.Println("Available templates:")
+		fmt.Println("---------------------")
+
+		foundTemplates := 0
+
+		for _, entry := range entries {
+			if entry.IsDir() {
+				templateName := entry.Name()
+				configPath := filepath.Join(templatesPath, templateName, "template.yaml")
+
+				// Check if template.yaml exists
+				if _, err := os.Stat(configPath); os.IsNotExist(err) {
+					continue // No yaml file, skip this directory
+				}
+
+				// Read and parse the yaml file
+				yamlFile, err := os.ReadFile(configPath)
+				if err != nil {
+					fmt.Printf("! Error reading config for '%s': %v\n", templateName, err)
+					continue
+				}
+
+				var config TemplateConfig
+				err = yaml.Unmarshal(yamlFile, &config)
+				if err != nil {
+					fmt.Printf("! Error parsing config for '%s': %v\n", templateName, err)
+					continue
+				}
+
+				// Print the details
+				fmt.Printf("  %s\n", config.Name)
+				fmt.Printf("    └─ ID: %s\n", templateName)
+				fmt.Printf("    └─ Description: %s\n\n", config.Description)
+				foundTemplates++
+			}
+		}
+
+		if foundTemplates == 0 {
+			fmt.Println("No templates found in the './templates' directory.")
+		}
 	},
 }
 

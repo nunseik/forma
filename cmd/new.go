@@ -7,39 +7,50 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"io"
+	"text/template"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"path/filepath"
 )
 
-// copyFile copies a single file from src to dst
-func copyFile(src, dst string) error {
-	// Open the source file for reading
-	sourceFile, err := os.Open(src)
-	if err != nil {
-		return fmt.Errorf("failed to open source file %s: %w", src, err)
-	}
-	defer sourceFile.Close()
+type TemplateData struct {
+    ProjectName string
+    // We can add more fields later, like Author, GoVersion, etc.
+}
 
-	// Create the destination file for writing
-	destFile, err := os.Create(dst)
-	if err != nil {
-		return fmt.Errorf("failed to create destination file %s: %w", dst, err)
-	}
-	defer destFile.Close()
+// processAndCopyFile reads a source file, processes it as a Go template,
+// and writes the output to the destination file.
+func processAndCopyFile(src, dst string, data TemplateData) error {
+    // Read the source file content
+    content, err := os.ReadFile(src)
+    if err != nil {
+        return fmt.Errorf("failed to read file %s: %w", src, err)
+    }
 
-	// Copy the contents from source to destination
-	_, err = io.Copy(destFile, sourceFile)
-	if err != nil {
-		return fmt.Errorf("failed to copy file contents: %w", err)
-	}
+    // Create a new template and parse the file content
+    tmpl, err := template.New(filepath.Base(src)).Parse(string(content))
+    if err != nil {
+        return fmt.Errorf("failed to parse template %s: %w", src, err)
+    }
 
-	return nil
+    // Create the destination file
+    destFile, err := os.Create(dst)
+    if err != nil {
+        return fmt.Errorf("failed to create destination file %s: %w", dst, err)
+    }
+    defer destFile.Close()
+
+    // Execute the template, writing the output to the destination file
+    err = tmpl.Execute(destFile, data)
+    if err != nil {
+        return fmt.Errorf("failed to execute template: %w", err)
+    }
+
+    return nil
 }
 
 // copyTemplate walks through a template directory and copies its structure and files.
-func copyTemplate(templatePath, projectPath string) error {
+func copyTemplate(templatePath, projectPath string, data TemplateData) error {
 	// Make sure the destination project directory exists.
 	// os.MkdirAll is safe to call even if the directory already exists.
 	if err := os.MkdirAll(projectPath, 0755); err != nil {
@@ -68,7 +79,7 @@ func copyTemplate(templatePath, projectPath string) error {
 		} else {
 			// It's a file, so copy it.
 			// (Assuming you have the copyFile function from our previous conversation)
-			return copyFile(path, destPath)
+			return processAndCopyFile(path, destPath, data)
 		}
 	}
 
@@ -82,8 +93,8 @@ var newCmd = &cobra.Command{
 	Long: `Creates a new project directory based on a template.
 For example:
 forma new go-api my-awesome-project`,
-// This makes sure the user provides exactly two arguments.
-	Args: cobra.ExactArgs(2), 
+	// This makes sure the user provides exactly two arguments.
+	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
 			fmt.Println("Error: You must specify a template and a project name.")
@@ -91,7 +102,7 @@ forma new go-api my-awesome-project`,
 		}
 		template := args[0]
 		projectName := args[1]
-		
+
 		fmt.Printf("Creating a new project '%s' from template '%s'\n", projectName, template)
 
 		// --- TODO: DAY 1 LOGIC GOES HERE ---
@@ -104,7 +115,7 @@ forma new go-api my-awesome-project`,
 			fmt.Printf("Template '%s' not found at '%s'.\n", template, templatePath)
 			return
 		}
-		
+
 		_, err = os.Stat("./" + projectName)
 		if err == nil {
 			// 2. If the project directory already exists, prompt the user for confirmation to overwrite it.
@@ -128,19 +139,19 @@ forma new go-api my-awesome-project`,
 			return
 		}
 		// 3. Create the new project directory.
-		err = os.Mkdir("./"+projectName, 0755)
-		if err != nil {
-			fmt.Printf("Error creating project directory '%s': %v\n", projectName, err)
-			return
+		projectPath := "./" + projectName
+		data := TemplateData{
+			ProjectName: projectName,
+			// Populate other fields as needed
 		}
 
 		// 3. Copy the entire template structure.
-		err = copyTemplate(templatePath, projectName)
+		err = copyTemplate(templatePath, projectPath, data)
 		if err != nil {
 			fmt.Printf("Error creating project from template: %v\n", err)
 			return
 		}
-		
+
 		fmt.Println("✅ Project created successfully!")
 	},
 }
