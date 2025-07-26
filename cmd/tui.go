@@ -139,7 +139,7 @@ func (m model) View() string {
 	case stepEnterProjectName:
 		return fmt.Sprintf("What is the name of your project?\n\n%s\n\n(press enter to confirm)", m.textInput.View())
 	case stepEnterAuthorName:
-		return fmt.Sprintf("What is your GitHub username/organization?\n\n%s\n\n(press enter to confirm)", m.textInput.View())
+		return fmt.Sprintf("What is your GitHub username?\n\n%s\n\n(press enter to confirm)", m.textInput.View())
 	}
 	return ""
 }
