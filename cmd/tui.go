@@ -126,6 +126,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.err = fmt.Errorf("invalid project name: %s\nNames should start with a letter or number, only contains letters, numbers, hyphens, or underscores", m.projectName)
 					return m, nil
 				}
+				m.err = nil // Reset error
 				m.textInput.Reset()
 				// If author was not provided by flag, ask for it. Otherwise, we're done.
 				if m.author == "" {
@@ -140,6 +141,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.err = fmt.Errorf("invalid author name: %s\nNames should start with a letter or number, only contains letters, numbers, hyphens, or underscores", m.author)
 					return m, nil
 				}
+				m.err = nil // Reset error
 				return m, tea.Quit
 			}
 			return m, nil
