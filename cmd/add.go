@@ -2,10 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
-	"path/filepath"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"github.com/spf13/cobra"
 )
 
@@ -42,9 +42,9 @@ var addCmd = &cobra.Command{
 		}
 
 		// Ensure template.yaml exists
-        if err := ensureTemplateYAML(destPath, repoName); err != nil {
-            fmt.Printf("Warning: could not create placeholder template.yaml: %v\n", err)
-        }
+		if err := ensureTemplateYAML(destPath, repoName); err != nil {
+			fmt.Printf("Warning: could not create placeholder template.yaml: %v\n", err)
+		}
 
 		fmt.Printf("Successfully added template '%s'.\n", repoName)
 		fmt.Println("You can now use this template with the 'new' command.")
@@ -56,20 +56,22 @@ func init() {
 }
 
 func ensureTemplateYAML(destPath, repoName string) error {
-    templatePath := filepath.Join(destPath, "template.yaml")
-    if _, err := os.Stat(templatePath); os.IsNotExist(err) {
-        defaultYAML := fmt.Sprintf(
-            `name: "%s"
+	templatePath := filepath.Join(destPath, "template.yaml")
+	if _, err := os.Stat(templatePath); os.IsNotExist(err) {
+		defaultYAML := fmt.Sprintf(
+			`name: "%s"
 description: "Placeholder template.yaml. Please customize."
 hooks:
   post_create:
-    - git init
-	- git add .
-	- git commit -m "feat: initial commit from forma template"
-	- echo "%s project initialized. Run with: go run ."'
-
+    - "git init"
+    - "git add ."
+    - "git commit -m 'feat: initial commit from forma template'"
+    - "echo '%s project initialized. Run with: go run .'"
 `, repoName, repoName)
-        return os.WriteFile(templatePath, []byte(defaultYAML), 0644)
-    }
-    return nil
+		return os.WriteFile(templatePath, []byte(defaultYAML), 0644)
+	}
+	return nil
 }
+
+// TODO:
+// - Add a TUI to customize the template.yaml file after cloning
