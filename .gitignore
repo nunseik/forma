@@ -1,0 +1,19 @@
+# Binaries
+forma
+forma.exe
+forma-*
+
+# OS files
+.DS_Store
+
+# Editor/IDE
+.vscode/
+.idea/
+
+# Go build cache
+bin/
+pkg/
+
+# Environment files
+.env
+*.log
