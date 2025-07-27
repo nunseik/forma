@@ -69,8 +69,8 @@ func copyTemplate(templatePath, projectPath string, data TemplateData) error {
 
 		if d.IsDir() {
 			// It's a directory, so create it in the destination.
-			// MkdirAll is used to create parent directories if they don't exist.
-			return os.MkdirAll(destPath, d.Type().Perm())
+			// Use standard permissions (0777) to avoid permission issues.
+			return os.MkdirAll(destPath, 0777)
 		} else {
 			// It's a file, so copy it.
 			return processAndCopyFile(path, destPath, data)
@@ -78,4 +78,34 @@ func copyTemplate(templatePath, projectPath string, data TemplateData) error {
 	}
 
 	return filepath.WalkDir(templatePath, walkFunc)
+}
+
+// getAvailableTemplates scans the templates directory and returns a slice of template names.
+func getAvailableTemplates() ([]string, error) {
+	templatesPath, err := getTemplatesPath()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get templates path: %w", err)
+	}
+	var templates []string
+
+	entries, err := os.ReadDir(templatesPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read templates directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			// Check if a template.yaml exists before adding it to the list
+			configPath := filepath.Join(templatesPath, entry.Name(), "template.yaml")
+			if _, err := os.Stat(configPath); err == nil {
+				templates = append(templates, entry.Name())
+			}
+		}
+	}
+
+	if len(templates) == 0 {
+		return nil, fmt.Errorf("no valid templates found in %s", templatesPath)
+	}
+
+	return templates, nil
 }

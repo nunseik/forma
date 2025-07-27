@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"bytes"
 	"os/exec"
-	"strings"
 	"text/template"
 
 	"gopkg.in/yaml.v3"
@@ -45,23 +44,15 @@ func runHooks(commands []string, projectPath string, data TemplateData) error {
 		command := processedCmd.String()
 		fmt.Printf("▶️ Running: %s\n", command)
 
-		// Split command into parts for exec
-		parts := strings.Fields(command)
-		if len(parts) == 0 {
-			continue
-		}
-		cmdName := parts[0]
-		cmdArgs := parts[1:]
+		// Use shell to execute the command string as-is
+        cmd := exec.Command("sh", "-c", command)
+        cmd.Dir = projectPath
+        cmd.Stdout = os.Stdout
+        cmd.Stderr = os.Stderr
 
-		// Execute the command
-		cmd := exec.Command(cmdName, cmdArgs...)
-		cmd.Dir = projectPath // Run the command in the new project's directory!
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("hook command '%s' failed: %w", command, err)
-		}
+        if err := cmd.Run(); err != nil {
+            return fmt.Errorf("hook command '%s' failed: %w", command, err)
+        }
 	}
 
 	fmt.Println("--- Hooks finished successfully ---")

@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/lipgloss"
@@ -52,36 +51,6 @@ func initialModel(flagAuthor string) model {
 		err:       err,
 		errorStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Bold(true),
 	}
-}
-
-// getAvailableTemplates scans the templates directory and returns a slice of template names.
-func getAvailableTemplates() ([]string, error) {
-	templatesPath, err := getTemplatesPath()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get templates path: %w", err)
-	}
-	var templates []string
-
-	entries, err := os.ReadDir(templatesPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read templates directory: %w", err)
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() {
-			// Check if a template.yaml exists before adding it to the list
-			configPath := filepath.Join(templatesPath, entry.Name(), "template.yaml")
-			if _, err := os.Stat(configPath); err == nil {
-				templates = append(templates, entry.Name())
-			}
-		}
-	}
-
-	if len(templates) == 0 {
-		return nil, fmt.Errorf("no valid templates found in %s", templatesPath)
-	}
-
-	return templates, nil
 }
 
 func (m model) Init() tea.Cmd {

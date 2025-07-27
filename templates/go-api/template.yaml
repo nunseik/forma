@@ -1,8 +1,12 @@
 name: "Go REST API"
-description: "A starter for a REST API with a main package and go.mod."
+description: "A starter for a REST API with a structured layout."
 hooks:
   post_create:
-    - "git init"
-    - "go mod init github.com/{{ .Author }}/{{ .ProjectName }}"
-    - "go mod tidy"
-    - "echo '✅ Project {{ .ProjectName }} initialized with Git and Go modules.'"
+    - git init
+    - go mod init github.com/{{ .Author }}/{{ .ProjectName }}
+    - go mod tidy
+    - go fmt ./...
+    - go test ./...
+    - git add .
+    - "git commit -m 'feat: initial commit from forma template'"
+    - "echo \"✅ Project {{ .ProjectName }} initialized, tested, and committed. Run with: go run cmd/api/main.go\""
