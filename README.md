@@ -4,7 +4,6 @@
 <p align="center">
 <strong>FORMA is a smart CLI tool that automates project scaffolding using powerful, shareable templates.</strong>
 <br />
-<!-- TODO: Replace YOUR_USERNAME with your actual GitHub username -->
 <a href="https://github.com/nunseik/forma/releases"><strong>» Download a Release «</strong></a>
 </p>
 
