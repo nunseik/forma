@@ -1,8 +1,6 @@
 # FORMA Project Initializer & Scaffolding
 <div align="center">
-<img src="https://placehold.co/200x200/a855f7/ffffff?text=FORMA" alt="forma logo" width="200"/>
-</div>
-
+<a href='https://postimg.cc/6yjSkrdQ' target='_blank'><img src='https://i.postimg.cc/6yjSkrdQ/Screen-Recording-2025-07-27-at-9-13-27-AM.gif' border='0' alt='Screen-Recording-2025-07-27-at-9-13-27-AM'/></a></div>
 <p align="center">
 <strong>FORMA is a smart CLI tool that automates project scaffolding using powerful, shareable templates.</strong>
 <br />
