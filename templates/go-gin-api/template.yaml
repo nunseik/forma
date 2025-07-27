@@ -1,7 +1,22 @@
 name: "Go REST API (Gin)"
-description: "A starter template for a RESTful API using the Gin framework."
+description: |
+  A starter template for a RESTful API using the Gin framework.
+
+  Endpoints:
+    - GET /         : Project metadata (name, author, created)
+    - GET /ping     : Health check (returns "pong")
+    - GET /hello    : Example endpoint with project and author info
+    - GET /healthz  : Health check endpoint
+
+  Usage:
+    - Run the server: go run .
+    - Access endpoints at http://localhost:8080
+
 hooks:
   post_create:
     - "go mod init github.com/{{ .Author }}/{{ .ProjectName }}"
     - "go mod tidy"
+    - "git init"
+    - "git add ."
+    - "git commit -m 'feat: initial commit from forma template'"
     - "echo '✅ Go API project initialized. Run with: go run .'"
