@@ -39,7 +39,13 @@ var addCmd = &cobra.Command{
 		if err != nil {
 			fmt.Printf("Error cloning repository: %v\nOutput: %s\n", err, output)
 			return
-		}	
+		}
+
+		// Ensure template.yaml exists
+        if err := ensureTemplateYAML(destPath, repoName); err != nil {
+            fmt.Printf("Warning: could not create placeholder template.yaml: %v\n", err)
+        }
+
 		fmt.Printf("Successfully added template '%s'.\n", repoName)
 		fmt.Println("You can now use this template with the 'new' command.")
 	},
@@ -47,4 +53,23 @@ var addCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(addCmd)
+}
+
+func ensureTemplateYAML(destPath, repoName string) error {
+    templatePath := filepath.Join(destPath, "template.yaml")
+    if _, err := os.Stat(templatePath); os.IsNotExist(err) {
+        defaultYAML := fmt.Sprintf(
+            `name: "%s"
+description: "Placeholder template.yaml. Please customize."
+hooks:
+  post_create:
+    - git init
+	- git add .
+	- git commit -m "feat: initial commit from forma template"
+	- echo "%s project initialized. Run with: go run ."'
+
+`, repoName, repoName)
+        return os.WriteFile(templatePath, []byte(defaultYAML), 0644)
+    }
+    return nil
 }
