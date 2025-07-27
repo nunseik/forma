@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"os/exec"
 	"text/template"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -27,10 +28,36 @@ type TemplateConfig struct {
 
 // listTemplatesCmd represents the list command
 func runHooks(commands []string, projectPath string, data TemplateData) error {
-	fmt.Println("--- Running post-creation hooks ---")
+	if len(commands) == 0 {
+		return nil
+	}
 
+	fmt.Println("--- The following post-creation hooks will be executed ---")
+	for i, commandStr := range commands {
+		// Process the command string as a template for preview
+		tmpl, err := template.New("hook").Parse(commandStr)
+		if err != nil {
+			fmt.Printf("  [%d] (template parse error): %s\n", i+1, commandStr)
+			continue
+		}
+		var processedCmd bytes.Buffer
+		if err := tmpl.Execute(&processedCmd, data); err != nil {
+			fmt.Printf("  [%d] (template exec error): %s\n", i+1, commandStr)
+			continue
+		}
+		fmt.Printf("  [%d] %s\n", i+1, processedCmd.String())
+	}
+
+	fmt.Print("Do you want to proceed with executing all hooks? [y/n]: ")
+	var response string
+	_, err := fmt.Scanln(&response)
+	if err != nil || (strings.ToLower(strings.TrimSpace(response)) != "y") {
+		fmt.Println("Aborted running hooks.")
+		return nil
+	}
+
+	fmt.Println("--- Running post-creation hooks ---")
 	for _, commandStr := range commands {
-		// Process the command string as a template first
 		tmpl, err := template.New("hook").Parse(commandStr)
 		if err != nil {
 			return fmt.Errorf("failed to parse hook command template: %w", err)
@@ -44,15 +71,14 @@ func runHooks(commands []string, projectPath string, data TemplateData) error {
 		command := processedCmd.String()
 		fmt.Printf("▶️ Running: %s\n", command)
 
-		// Use shell to execute the command string as-is
-        cmd := exec.Command("sh", "-c", command)
-        cmd.Dir = projectPath
-        cmd.Stdout = os.Stdout
-        cmd.Stderr = os.Stderr
+		cmd := exec.Command("sh", "-c", command)
+		cmd.Dir = projectPath
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 
-        if err := cmd.Run(); err != nil {
-            return fmt.Errorf("hook command '%s' failed: %w", command, err)
-        }
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("hook command '%s' failed: %w", command, err)
+		}
 	}
 
 	fmt.Println("--- Hooks finished successfully ---")
