@@ -2,11 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
-	"text/template"
 	"time"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
@@ -21,85 +20,14 @@ type TemplateData struct {
 	Timestamp   string
 }
 
-// processAndCopyFile reads a source file, processes it as a Go template,
-// and writes the output to the destination file.
-func processAndCopyFile(src, dst string, data TemplateData) error {
-	// Read the source file content
-	content, err := os.ReadFile(src)
-	if err != nil {
-		return fmt.Errorf("failed to read file %s: %w", src, err)
-	}
-
-	// Create a new template and parse the file content
-	tmpl, err := template.New(filepath.Base(src)).Parse(string(content))
-	if err != nil {
-		return fmt.Errorf("failed to parse template %s: %w", src, err)
-	}
-
-	// Create the destination file
-	destFile, err := os.Create(dst)
-	if err != nil {
-		return fmt.Errorf("failed to create destination file %s: %w", dst, err)
-	}
-	defer destFile.Close()
-
-	// Execute the template, writing the output to the destination file
-	err = tmpl.Execute(destFile, data)
-	if err != nil {
-		return fmt.Errorf("failed to execute template: %w", err)
-	}
-
-	return nil
-}
-
-// copyTemplate walks through a template directory and copies its structure and files.
-func copyTemplate(templatePath, projectPath string, data TemplateData) error {
-	// Make sure the destination project directory exists.
-	// os.MkdirAll is safe to call even if the directory already exists.
-	if err := os.MkdirAll(projectPath, 0755); err != nil {
-		return fmt.Errorf("failed to create project directory: %w", err)
-	}
-
-	// Walk the template directory.
-	walkFunc := func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err // Propagate errors from walking the directory.
-		}
-
-		// Get the relative path of the file/dir with respect to the template root.
-		relativePath, err := filepath.Rel(templatePath, path)
-		if err != nil {
-			return err
-		}
-
-		// Create the full destination path.
-		destPath := filepath.Join(projectPath, relativePath)
-
-		// Skip the template.yaml file itself.
-		if d.Name() == "template.yaml" {
-			return nil
-		}
-
-		if d.IsDir() {
-			// It's a directory, so create it in the destination.
-			// MkdirAll is used to create parent directories if they don't exist.
-			return os.MkdirAll(destPath, d.Type().Perm())
-		} else {
-			// It's a file, so copy it.
-			return processAndCopyFile(path, destPath, data)
-		}
-	}
-
-	return filepath.WalkDir(templatePath, walkFunc)
-}
-
-// newCmd represents the new command
 var newCmd = &cobra.Command{
 	Use:   "new <template> <project_name>",
 	Short: "Creates a new project from a specified template.",
 	Long: `Creates a new project directory based on a template.
 For example:
 forma new go-api my-awesome-project`,
+	Example: `  forma new go-api my-awesome-project
+  forma new python-app my-python-project --author "Jane Doe"`,
 	// This makes sure the user provides exactly two arguments.
 	Run: func(cmd *cobra.Command, args []string) {
 		var templateName, projectName, finalAuthor string
@@ -120,7 +48,11 @@ forma new go-api my-awesome-project`,
 			}
 
 			// Cast the final model to our model type
-			final := finalModel.(model)
+			final, ok := finalModel.(model)
+			if !ok {
+				fmt.Println("Error: unexpected model type returned from TUI.")
+				return
+			}
 
 			// Check if there was an error in the TUI
 			if final.err != nil {
@@ -138,8 +70,6 @@ forma new go-api my-awesome-project`,
 			projectName = final.projectName
 			finalAuthor = final.author
 		}
-
-		fmt.Printf("Creating a new project '%s' from template '%s'\n", projectName, templateName)
 
 		systemTemplatesPath, err := getTemplatesPath()
 		if err != nil {
@@ -162,18 +92,23 @@ forma new go-api my-awesome-project`,
 			return
 		}
 
-		_, err = os.Stat("./" + projectName)
+		fmt.Printf("Creating a new project '%s' from template '%s'\n", projectName, templateName)
+
+		// Create the new project directory.
+		projectPath := filepath.Join(".", projectName)
+		_, err = os.Stat(projectPath)
 		if err == nil {
 			// If the project directory already exists, prompt the user for confirmation to overwrite it.
 			fmt.Printf("Project directory '%s' already exists. Do you want to overwrite it? (y/n): ", projectName)
 			var response string
 			fmt.Scanln(&response)
-			if response != "y" && response != "Y" {
+			normalized := strings.ToLower(strings.TrimSpace(response))
+			if normalized != "y" {
 				fmt.Println("Project creation aborted.")
 				return
-			} else if response == "y" || response == "Y" {
+			} else {
 				// If the user confirms, remove the existing directory.
-				err = os.RemoveAll("./" + projectName)
+				err = os.RemoveAll(projectPath)
 				if err != nil {
 					fmt.Printf("Error removing existing project directory: %v\n", err)
 					return
@@ -191,8 +126,6 @@ forma new go-api my-awesome-project`,
 			Timestamp:   time.Now().Format(time.RFC822),
 		}
 
-		// Create the new project directory.
-		projectPath := "./" + projectName
 
 		// Copy the entire template structure.
 		err = copyTemplate(templatePath, projectPath, data)
