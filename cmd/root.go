@@ -31,6 +31,7 @@ func Execute(fs embed.FS) {
 }
 
 func init() {
+	rootCmd.CompletionOptions.DisableDefaultCmd = true
 }
 
 
