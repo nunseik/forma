@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
 	"github.com/spf13/cobra"
 )
 
@@ -15,6 +16,10 @@ var addCmd = &cobra.Command{
 	Short: "Add a new template from a Git repository",
 	Long:  `Clones a Git repository into the FORMA templates directory.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) != 1 {
+			fmt.Println("Usage: forma add <git_repo_url>")
+			return
+		}
 		repoURL := args[0]
 
 		templatesPath, err := getTemplatesPath()
