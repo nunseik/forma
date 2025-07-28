@@ -135,7 +135,12 @@ var listCmd = &cobra.Command{
 				// Print the details
 				fmt.Printf("  %s\n", config.Name)
 				fmt.Printf("    └─ ID: %s\n", templateName)
-				fmt.Printf("    └─ Description: %s\n\n", config.Description)
+				// Print only the first line of the description, trimmed to 100 characters
+				desc := strings.SplitN(config.Description, "\n", 2)[0]
+				if len(desc) > 100 {
+					desc = desc[:97] + "..."
+				}
+				fmt.Printf("    └─ Description: %s\n\n", desc)
 				foundTemplates++
 			}
 		}
